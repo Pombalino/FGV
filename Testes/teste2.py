@@ -64,25 +64,59 @@ while i <= r + 1:
 
 def soma(valor, valor1, valor2, valor3):
     a=0
-    try:
-        a = valor + valor1 + valor2 + valor3
-    except TypeError:
-        a = eval(valor) + eval(valor1) + eval(valor2) + eval(valor3)
-    return a # falta tirar o = do começo das strings
+    if type(valor1) == str: 
+        valor1 = valor1.replace("=","") # working
+        valor1 = eval(valor1)
+    elif type(valor2) == str: # checa se valor é string (padrão '=int+int')
+        valor2 = valor2.replace("=","") # limpa o igual
+        valor2 = eval(valor2) # faz a conta da string 'int+int'
+    elif type(valor3) == str:
+        valor3 = valor3.replace("=","")
+        valor3 = eval(valor3)
+    elif type(valor) == str:
+        valor.replace("=","")
+        valor = eval(valor)
+    '''else:
+        float(valor)
+        float(valor1)
+        float(valor2)
+        float(valor3)'''
+    a = valor+valor1+valor2+valor3 # retorna a soma
+    return a
 
-valu = []
+Hope = {}
+
+for trip in nomes:
+    Hope[trip] = []
+
 for l in row_list:
     start = l + 5  # pega o começo do projeto
     try:
         ind = row_list.index(l)
         end = row_list[ind+1]-6 # pega o fim
     except IndexError:
-        end = 131
+        end = r-1
     for trip in nomes:
+        valu = []
         som = 0
-        values = Val[trip][start:end] # slice os falores dos projetos
-        print(values)
+        values = Val[trip][start:end] # slice os valores dos projetos
+        # print(trip)
         for valor in values:
-            som = soma(som,*valor) # not working
+            print(valor)
+            # print(values.index(valor))
+            som = soma(som, *valor) # working
             valu.append(som)
-            
+        Hope[trip].append(valu) # not exactly what I wanted, but so much better. cada lista no key é um proj
+
+Fim = {}
+for trip in nomes:
+    Fim[trip] = []
+    for proj in Hope[trip]:
+        proje = sum(proj)
+        Fim[trip].append(proje) # soma as listas de cada key e salva como coluna
+
+import pandas as pd
+
+df = pd.DataFrame(Fim) # exportando
+df.to_excel('/home/gustavo/Documents/LPC & Co/SEC_CULT/condensado_2015.xlsx', index=False)
+# Copiar o código em funções no jupyter pra poder rodar em loop pra puxar as info de vários arquivos
