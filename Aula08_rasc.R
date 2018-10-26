@@ -37,7 +37,8 @@ library(gutenbergr)
 hgwells <- gutenberg_download(c(35,36,5230,159))
 tidy_wells <- hgwells %>% unnest_tokens(word,text) %>% anti_join(stop_words)
 wells_sort <- count(tidy_wells, word, sort=TRUE)
-mutate(wells_sort, author="H.G.Wells") -> wells_mutate
+wells_filter<- filter(wells_sort,n>540)
+mutate(wells_filter, word=reorder(word,n)) -> wells_mutate
 
 ggplot(wells_mutate,aes(word,n))+geom_col()+xlab(NULL)+coord_flip()->tidy_ggplot
 print(tidy_ggplot)
@@ -47,13 +48,10 @@ wordcloud(wells_mutate$word,wells_mutate$n,
           rot.per = FALSE,colors= c("#AB329C", "#195B5B", "#6D8D2F", "#287928"))
 
 bronte <- gutenberg_download(c(1260,768,969,9182,767))
-bronte_mutate <- bronte %>%unnest_tokens(word,text)%>%
-  anti_join(stop_words)%>%count(word,sort=TRUE)%>%
-  mutate(word=reorder(word,n),author="Brontë Sisters")
+tidy_bronte <- bronte %>%unnest_tokens(word,text)%>%
+  anti_join(stop_words)
 
-jane_mutate <- mutate(tidy_books,author="Jane Austen")
-
-bind_rows(bronte_mutate,wells_mutate,jane_mutate) -> tidy_bind
+bind_rows(mutate(tidy_bronte, author="Brontë Sisters"), mutate(tidy_wells,author='H.G.Wells'),mutate(tidy_books,author='Jane Austen')) -> tidy_bind
 tidy_bind <- mutate(tidy_bind, word=str_extract(word,"[a-z']+"))
 
 tidy_count <- count(tidy_bind,author,word)
@@ -66,18 +64,18 @@ tidy_spread <- spread(tidy_selected,author,proportion)
 tidy_gather<-gather(tidy_spread,author,proportion,'Brontë Sisters':'H.G.Wells')
 
 library(scales)
-# aqui que ta cagado
-ggplot(tidy_gather,aes(x=proportion,y='Jane Austen',color=abs('Jane Austen'-proportion)))->tidy_ggplot
+
+ggplot(tidy_gather,aes(x=proportion,y='Jane Austen',color=abs(tidy_gather$`Jane Austen` -proportion)))->tidy_ggplot
 tidy_ggplot+geom_abline(color="gray40",lty=2)->tidy_line
 print(tidy_line)
-print(tidy_scale) #que reflete aqui
+
 tidy_line+geom_jitter(alpha=0.1,size=2.5,width=0.3,height=0.3)->tidy_jitter
 tidy_jitter+geom_text(aes(label=word),check_overlap = TRUE, vjust=1.5)-> tidy_leg
-tidy_leg+scale_x_log10(labels=percent_format())+scale_y_log10(labels=percent_format())->tidy_scale
-
+tidy_leg+scale_x_log10(labels(percent_format()))+scale_y_log10(labels(percent_format()))->tidy_scale
+# menos pior, mas ta dando erro pra converter pra log10
 print(tidy_scale)
-
-tidy_scale+scale_color_gradient(limits=c(0,0.001),low="darkslategray4",high="gray75")->gradient
+# https://www.tidytextmining.com/tidytext.html#word-frequencies
+tidy_leg+scale_color_gradient(limits=c(0,0.001),low="darkslategray4",high="gray75")->gradient
 gradient + facet_wrap(~author,ncol=2)->wrap
 wrap + theme(legend.position="none")+labs(y="Jane Austen",x=NULL)->tidy_legends
 
@@ -85,3 +83,14 @@ print(tidy_legends)
 
 cor.test(data=tidy_gather[tidy_gather$author=="Brontë Sisters",]~proportion+'Jane Austen')$estimate
 cor.test(data=tidy_gather[tidy_gather$author=="H.G.Wells",]~proportion+'Jane Austen')$estimate
+
+ggplot(tidy_gather, aes(x = proportion, y = `Jane Austen`, color = abs(`Jane Austen` - proportion))) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
+  facet_wrap(~author, ncol = 2) +
+  theme(legend.position="none") +
+  labs(y = "Jane Austen", x = NULL)
